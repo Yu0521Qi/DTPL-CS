@@ -1,0 +1,12 @@
+{
+  "name": "liquor-pitch-trainer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "酒水销售话术训练器（含零依赖代理后端，保护上游 API Key）",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

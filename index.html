@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>酒水地推话术陪练 · AI 智能体</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">
+    <span class="logo-mark">🍷</span>
+    <span>酒水地推话术陪练</span>
+    <span class="logo-sub">AI 销售教练</span>
+  </div>
+  <div class="header-spacer"></div>
+  <select id="memberSwitch" class="hdr-select" title="切换练习成员（全员同级）"></select>
+  <div class="mode-switch" id="modeSwitch">
+    <button data-mode="rule" class="on">离线陪练</button>
+    <button data-mode="llm">AI 客户 Agent（大模型）</button>
+  </div>
+  <button class="btn ghost sm" id="btnGrowth" style="margin-left:12px;">📈 我的成长</button>
+  <button class="btn ghost sm" id="btnRestart" style="display:none;">重新配置</button>
+</header>
+
+<!-- ================= 主界面（首页） ================= -->
+<section class="screen" id="screenHome">
+  <div class="container home">
+    <div class="home-hero">
+      <div class="home-logo">🍷</div>
+      <h1 class="home-title">酒水地推话术陪练</h1>
+      <p class="home-sub">AI 销售教练 · 把难搞的终端老板，练到你敢开口为止</p>
+      <button class="btn primary home-start" id="btnHomeStart">🚀 开始陪练</button>
+    </div>
+
+    <div class="home-cards">
+      <div class="home-feat">
+        <div class="hf-emoji">🎯</div>
+        <div class="hf-t">真实客户剧本</div>
+        <div class="hf-d">老张、老马…六类性格各异的终端老板，按你每一句话实时反应、抛异议、算账。</div>
+      </div>
+      <div class="home-feat">
+        <div class="hf-emoji">📊</div>
+        <div class="hf-t">逐句点评复盘</div>
+        <div class="hf-d">七维度评分 + 雷达图 + 踩雷检测，练完立刻知道哪里该补、哪里说顺了。</div>
+      </div>
+      <div class="home-feat">
+        <div class="hf-emoji">🏆</div>
+        <div class="hf-t">积分与成长曲线</div>
+        <div class="hf-d">每局自动积分、解锁徽章，多练多刷分，和小伙伴一起把话术练熟。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 客户名单（可搜索） ================= -->
+<section class="screen" id="screenCustomers">
+  <div class="container">
+    <div class="cust-head">
+      <button class="btn ghost sm" id="btnCustBack">← 返回首页</button>
+      <h1>选择你要拜访的客户</h1>
+      <p>按门店 / 客户公司检索，点选后进入产品与训练模式配置。</p>
+    </div>
+
+    <div class="search-bar">
+      <span class="search-ico">🔍</span>
+      <input id="custSearch" placeholder="搜索客户名字、门店、性格标签，如：烟酒店 / 谨慎 / 老马">
+    </div>
+
+    <div class="tier-filters" id="tierFilters">
+      <button class="tier-chip on" data-tier="all">全部</button>
+      <button class="tier-chip" data-tier="low">低档 · 易成交</button>
+      <button class="tier-chip" data-tier="mid">中档 · 标准实战</button>
+      <button class="tier-chip" data-tier="high">高档 · 难啃大客户</button>
+    </div>
+
+    <div class="card-grid grid-3" id="custList"></div>
+  </div>
+</section>
+
+<!-- ================= 产品选择（可搜索） ================= -->
+<section class="screen" id="screenProduct">
+  <div class="container">
+    <div class="cust-head">
+      <button class="btn ghost sm" id="btnProdBack">← 返回客户名单</button>
+      <h1>选择你要推的产品</h1>
+      <p>按名称 / 品类 / 场景检索，选定后进入最后一步确认。</p>
+    </div>
+
+    <div class="search-bar">
+      <span class="search-ico">🔍</span>
+      <input id="prodSearch" placeholder="搜索产品名称、品类、场景，如：白酒 / 宴席 / 牛栏山">
+    </div>
+
+    <div class="card-grid grid-3" id="productGrid"></div>
+  </div>
+</section>
+
+<!-- ================= 配置页 ================= -->
+<section class="screen" id="screenSetup">
+  <div class="container">
+
+    <button class="btn ghost sm" id="btnSetupBack" style="margin-bottom:14px;">← 上一步 · 重选产品</button>
+
+    <div class="hero">
+      <h1>找个难搞的老板，练到你敢开口为止</h1>
+      <p>选择产品、客户和训练模式，AI 扮演真实终端老板跟你过招，逐句点评并给出复盘报告。</p>
+    </div>
+
+    <div class="llm-box" id="llmBox" style="display:none;">
+      <div class="row">
+        <div style="flex:2">
+          <label>激活令牌（卖家发放）</label>
+          <input id="llmToken" placeholder="粘贴卖家给你的令牌">
+        </div>
+        <div style="flex:2">
+          <label>服务地址（一般留空）</label>
+          <input id="llmProxy" placeholder="留空=同源；自托管时填后端地址">
+        </div>
+      </div>
+      <div class="llm-tip">
+        令牌模式：你的对话经由<b>卖家后端代理</b>调用大模型，<b>你永远接触不到真实 API Key</b>，因此也无法转卖。把卖家发给你的令牌粘进上方即可使用；服务地址一般留空（自托管后端时填后端地址）。
+      </div>
+      <details style="margin-top:10px;">
+        <summary style="cursor:pointer;font-size:13px;color:#6b7280;">开发者直连（仅自测用，填入即含真实 Key）</summary>
+        <div class="row" style="margin-top:10px;">
+          <div style="flex:1.2">
+            <label>接口服务商</label>
+            <select id="llmPreset"></select>
+          </div>
+          <div style="flex:2">
+            <label>API Base URL（需以 /chat/completions 结尾）</label>
+            <input id="llmUrl" placeholder="https://api.deepseek.com/v1/chat/completions">
+          </div>
+          <div style="flex:1">
+            <label>模型名</label>
+            <input id="llmModel" placeholder="deepseek-chat">
+          </div>
+          <div style="flex:1.4">
+            <label>API Key</label>
+            <input id="llmKey" type="password" placeholder="sk-...">
+          </div>
+        </div>
+        <div class="llm-tip">仅当你自己有上游 Key 想本地测试时用；分发给买家时请勿填写此处，避免真实 Key 外泄。</div>
+      </details>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn ghost sm" id="btnTestLLM">测试连接</button>
+        <span id="llmTestMsg" class="muted" style="font-size:13px;"></span>
+      </div>
+      <div class="llm-warn" id="llmCorsWarn" style="display:none;">
+        ⚠️ 当前页面是用 <code>file://</code> 直接打开的，浏览器会因 CORS 拦截调用。请改用本地服务器打开：在项目目录执行 <code>node server.js</code>，然后访问 <b>http://localhost:5173</b>。用本地服务器打开后即可正常调用大模型。
+      </div>
+    </div>
+
+    <h3 class="section-title">第一步 · 确认拜访对象 <span class="section-hint">性格、诉求、雷区各不相同</span></h3>
+    <div class="picked-card" id="pickedPersona"></div>
+    <div class="pick-acts">
+      <button class="btn ghost sm" id="btnPickPersona">🔄 更换客户</button>
+      <span class="muted" id="pickPersonaHint">默认已帮你选定，想换点这里展开全部客户</span>
+    </div>
+    <div class="card-grid grid-6" id="personaGrid" style="display:none;"></div>
+
+    <h3 class="section-title">第二步 · 确认要推的产品 <span class="section-hint">决定你的卖点、政策和算账方式</span></h3>
+    <div class="picked-card" id="pickedProduct"></div>
+    <div class="pick-acts">
+      <button class="btn ghost sm" id="btnPickProduct">🔄 更换产品</button>
+      <span class="muted" id="pickProductHint">需要换品，点这里回到产品页重新挑</span>
+    </div>
+
+    <h3 class="section-title">第三步 · 选择难度</h3>
+    <div class="card-grid grid-3" id="diffGrid"></div>
+
+    <h3 class="section-title">第四步 · 训练模式 <span class="section-hint">专项突破某一环节，或完整走一遍</span></h3>
+    <div class="card-grid grid-4" id="modeGrid"></div>
+
+    <label class="check-line" id="examLine">
+      <input type="checkbox" id="examMode">
+      <span><b>考核模式</b>　对练时隐藏教练提示、客户状态和参考话术，考完才给分。适合主管给团队做测评。</span>
+    </label>
+
+    <div class="start-bar">
+      <div class="summary" id="startSummary">请完成上面的选择</div>
+      <button class="btn primary btn-start" id="btnStart" disabled>🚀 开始陪练</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= 训练页 ================= -->
+<section class="screen" id="screenTrain">
+  <div class="container">
+    <div class="train-wrap">
+
+      <div class="chat-panel">
+        <div class="chat-head">
+          <span class="avatar" id="chatAvatar">🧑‍🦱</span>
+          <img class="chat-prod-img" id="chatProdImg" alt="" style="display:none">
+          <div>
+            <div class="who" id="chatWho">老张</div>
+            <div class="ctx" id="chatCtx">社区烟酒店老板</div>
+          </div>
+          <div class="sp"></div>
+          <span class="tag" id="turnTag">第 0 轮</span>
+          <span class="tag" id="examTag" style="display:none;background:#fdf2f0;border-color:#f2dbd6;color:var(--wine)">考核中</span>
+          <button class="btn ghost sm" id="btnUndo" disabled title="撤回上一句，重说一次">↩ 撤回</button>
+          <button class="btn sm" id="btnFinish">结束并复盘</button>
+        </div>
+        <div class="chat-body" id="chatBody"></div>
+        <div class="chat-foot">
+          <div class="quick-row" id="quickRow"></div>
+          <div class="input-row">
+            <textarea id="input" rows="1" placeholder="说出你要说的话，回车发送，Shift+回车换行"></textarea>
+            <button class="btn ghost" id="btnDemo">🎬 完整演示(3轮)</button>
+            <button class="btn primary" id="btnSend">发送</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="side-tabs" id="sideTabs">
+          <button data-tab="status" class="on">状态</button>
+          <button data-tab="coach">教练</button>
+          <button data-tab="obj">异议</button>
+          <button data-tab="ref">话术</button>
+          <button data-tab="book">手册</button>
+        </div>
+        <div class="side-card exam-hide" data-tab="status">
+          <h4>📊 客户状态</h4>
+          <div class="body">
+            <div class="stat-row">
+              <div class="stat-label"><span>态度 / 好感</span><b id="vA">45</b></div>
+              <div class="bar a"><i id="bA" style="width:45%"></i></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label"><span>进货意向</span><b id="vI">20</b></div>
+              <div class="bar i"><i id="bI" style="width:20%"></i></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label"><span>信任度</span><b id="vT">32</b></div>
+              <div class="bar t"><i id="bT" style="width:32%"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-card exam-hide" data-tab="coach">
+          <h4>🎯 教练建议</h4>
+          <div class="body">
+            <div class="coach-box" id="coachBox">
+              <span class="lb">下一步该做什么</span>
+              <span id="coachText">先破冰：自报家门 + 说清来意 + 承诺不占用太多时间。</span>
+            </div>
+            <p class="coach-tip">这是写给你的建议，<b>不要复制发给客户</b>。想直接看 AI 怎么回，点左下「🤖 AI 示范回答」。</p>
+          </div>
+        </div>
+
+        <div class="side-card exam-hide" id="objCard" style="display:none;" data-tab="obj">
+          <h4>⚠️ 待处理异议</h4>
+          <div class="body">
+            <div class="obj-alert">
+              <span class="lb" id="objLabel"></span>
+              <span id="objText"></span>
+              <span class="tip" id="objTip"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-card exam-hide" data-tab="ref">
+          <h4>💡 本阶段参考话术</h4>
+          <div class="body" id="refBox"></div>
+        </div>
+
+        <div class="side-card" data-tab="book">
+          <h4>📖 地推作战手册</h4>
+          <div class="body" id="playbook"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ================= 复盘页 ================= -->
+<section class="screen" id="screenReport">
+  <div class="container">
+    <div class="report-head">
+      <canvas id="radar" width="360" height="360" style="width:180px;height:180px;"></canvas>
+      <div class="score-big">
+        <div class="num" id="rTotal">0</div>
+        <div class="grade" id="rGrade">D</div>
+      </div>
+      <div>
+        <div class="result-line" id="rResult"></div>
+        <div class="final-stat" id="rStats"></div>
+        <div class="dim-list" id="rDims"></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="block ok">
+        <h3><span class="dot"></span>做得好的地方</h3>
+        <div id="rStrengths"></div>
+      </div>
+      <div class="block">
+        <h3><span class="dot"></span>优先改进项</h3>
+        <div id="rImproves"></div>
+      </div>
+    </div>
+
+    <div class="block" style="margin-bottom:16px;">
+      <h3><span class="dot"></span>关键问题诊断</h3>
+      <div id="rNotes"></div>
+    </div>
+
+    <details class="block ref-answer" id="rModelWrap" style="display:none;margin-bottom:16px;">
+      <summary>📘 标准答案（仅供参考，引发你自行思考差距）</summary>
+      <div id="rModel"></div>
+    </details>
+
+    <div class="block">
+      <h3><span class="dot"></span>逐轮复盘</h3>
+      <div class="turn-list" id="rTurns"></div>
+    </div>
+
+    <div class="report-actions">
+      <button class="btn primary" id="btnAgain">同客户再练一次</button>
+      <button class="btn" id="btnChange">换个客户</button>
+      <button class="btn" id="btnExport">导出复盘报告</button>
+      <button class="btn" id="btnToGrowth">看我的成长</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 成长页 ================= -->
+<section class="screen" id="screenGrowth">
+  <div class="container">
+    <div class="hero" style="text-align:left;padding-bottom:18px;">
+      <h1>我的成长</h1>
+      <p>所有成绩只存在这台设备的浏览器里。练得越多，曲线越诚实。</p>
+    </div>
+
+    <div class="two-col" style="margin-bottom:16px;">
+      <div class="block">
+        <h3><span class="dot"></span>我的积分与徽章</h3>
+        <div id="gPoints"></div>
+      </div>
+      <div class="block">
+        <h3><span class="dot"></span>本周练习概览</h3>
+        <div id="gWeek"></div>
+      </div>
+    </div>
+
+    <div class="stat-cards" id="gCards"></div>
+
+    <div class="two-col" id="gCharts">
+      <div class="block">
+        <h3><span class="dot"></span>总分趋势</h3>
+        <div class="chart-wrap"><canvas id="trendChart" width="1100" height="440"></canvas></div>
+        <div class="chart-note" id="trendNote"></div>
+      </div>
+      <div class="block">
+        <h3><span class="dot"></span>能力雷达（全部练习平均）</h3>
+        <div class="chart-wrap radar-wrap"><canvas id="avgRadar" width="720" height="720"></canvas></div>
+      </div>
+    </div>
+
+    <div class="block" style="margin-bottom:16px;">
+      <h3><span class="dot"></span>各客户平均得分 <span class="section-hint">排在最前面的就是你最该补的短板</span></h3>
+      <div id="gPersona"></div>
+    </div>
+
+    <div class="block">
+      <h3><span class="dot"></span>练习记录</h3>
+      <div class="turn-list" id="gList" style="max-height:420px;"></div>
+      <div class="report-actions">
+        <button class="btn" id="btnBackHome">继续练习</button>
+        <button class="btn" id="btnClearHistory">清空全部记录</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 自定义编辑弹窗 ================= -->
+
+<!-- ================= 自定义编辑弹窗 ================= -->
+<div class="modal" id="modal">
+  <div class="modal-mask" id="modalMask"></div>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitle">编辑</h3>
+      <button class="btn ghost sm" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <span class="modal-err" id="modalErr"></span>
+      <button class="btn" id="modalCancel">取消</button>
+      <button class="btn primary" id="modalSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/llm.js"></script>
+<script src="assets/js/app.js"></script>
+<!-- 预留接口：账号注册登录系统 / 支付系统（当前为 localStorage mock，接真实后端替换 window.AuthProvider / window.PayProvider 即可） -->
+<script src="assets/js/account.js"></script>
+<script src="assets/js/payment.js"></script>
+</body>
+</html>

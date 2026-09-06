@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>卖家管理后台 · 酒水话术训练器</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:#f4f6fa; color:#1f2937; }
+  .wrap { max-width:880px; margin:0 auto; padding:28px 18px 60px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:#6b7280; font-size:13px; margin-bottom:20px; }
+  .card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:20px; margin-bottom:18px; }
+  .card h2 { font-size:15px; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+  label { display:block; font-size:13px; color:#374151; margin:10px 0 5px; }
+  input, select { width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:9px; font-size:14px; }
+  input:focus, select:focus { outline:none; border-color:#6366f1; }
+  button { cursor:pointer; border:none; border-radius:9px; padding:10px 16px; font-size:14px; background:#4f46e5; color:#fff; }
+  button:hover { background:#4338ca; }
+  button.ghost { background:#eef2ff; color:#4338ca; }
+  button.danger { background:#fee2e2; color:#b91c1c; }
+  button.sm { padding:6px 11px; font-size:13px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:160px; }
+  .msg { font-size:13px; margin-top:8px; min-height:18px; }
+  .ok { color:#15803d; } .err { color:#b91c1c; } .muted { color:#6b7280; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:9px 8px; border-bottom:1px solid #f1f1f4; }
+  th { color:#6b7280; font-weight:500; }
+  .badge { padding:2px 9px; border-radius:999px; font-size:12px; }
+  .on { background:#dcfce7; color:#15803d; } .off { background:#fee2e2; color:#b91c1c; }
+  .token-box { background:#f8fafc; border:1px dashed #cbd5e1; border-radius:9px; padding:10px 12px; font-family:monospace; word-break:break-all; font-size:13px; }
+  .guide { font-size:13px; line-height:1.7; color:#374151; }
+  .guide ol { padding-left:20px; margin:6px 0; }
+  .guide code { background:#eef2ff; padding:1px 6px; border-radius:5px; }
+  #loginCard { max-width:380px; margin:80px auto; }
+  .hidden { display:none; }
+  .step-no { display:inline-flex; width:22px; height:22px; background:#4f46e5; color:#fff; border-radius:50%; align-items:center; justify-content:center; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 登录 -->
+  <div id="loginCard" class="card">
+    <h1>卖家管理后台</h1>
+    <div class="sub">首次使用请先设置管理员密码；之后用密码登录。</div>
+    <div id="setupHint" class="msg muted"></div>
+    <label>管理员密码</label>
+    <input id="pwd" type="password" placeholder="至少 6 位">
+    <div class="msg" id="loginMsg"></div>
+    <div class="row" style="margin-top:10px;">
+      <button id="btnLogin">登录</button>
+      <button id="btnSetup" class="ghost hidden">初始化密码</button>
+    </div>
+  </div>
+
+  <!-- 主面板 -->
+  <div id="dash" class="hidden">
+    <h1>卖家管理后台</h1>
+    <div class="sub">真实 API Key 只存在这里（服务器端），买家拿到的是不能调通底层的"令牌"。<a href="#" id="logout" class="muted">退出登录</a></div>
+
+    <!-- 上游 Key -->
+    <div class="card">
+      <h2>① 填入你的上游模型（只做一次）</h2>
+      <div class="row">
+        <div>
+          <label>接口地址（/chat/completions）</label>
+          <input id="upUrl" placeholder="https://api.deepseek.com/v1/chat/completions">
+        </div>
+        <div>
+          <label>模型名</label>
+          <input id="upModel" placeholder="deepseek-chat">
+        </div>
+      </div>
+      <label>API Key（仅存服务器，不下发浏览器）</label>
+      <input id="upKey" type="password" placeholder="sk-...">
+      <div class="msg" id="keyMsg"></div>
+      <button id="btnSaveKey" style="margin-top:6px;">保存上游配置</button>
+    </div>
+
+    <!-- 新建买家 -->
+    <div class="card">
+      <h2>② 新建买家 → 得到令牌</h2>
+      <div class="row">
+        <div>
+          <label>买家名称（便于你识别）</label>
+          <input id="bName" placeholder="如：张三 / 渠道A">
+        </div>
+        <div>
+          <label>调用额度（次 / 总计）</label>
+          <input id="bQuota" type="number" value="1000" min="1">
+        </div>
+      </div>
+      <div class="msg" id="buyerMsg"></div>
+      <button id="btnNewBuyer" style="margin-top:6px;">生成令牌</button>
+      <div id="tokenArea" class="hidden" style="margin-top:12px;">
+        <label>把这串令牌发给买家（他粘进 App 的"激活令牌"即可用）</label>
+        <div class="token-box" id="tokenVal"></div>
+        <button class="ghost sm" id="btnCopy" style="margin-top:8px;">复制令牌</button>
+      </div>
+    </div>
+
+    <!-- 买家列表 -->
+    <div class="card">
+      <h2>③ 买家与用量</h2>
+      <div id="totalUsed" class="muted" style="font-size:13px;margin-bottom:10px;"></div>
+      <table>
+        <thead><tr><th>名称</th><th>已用/额度</th><th>状态</th><th>最近使用</th><th>操作</th></tr></thead>
+        <tbody id="buyerRows"></tbody>
+      </table>
+      <div id="noBuyer" class="muted" style="font-size:13px;padding:10px 0;">还没有买家，先在上方生成。</div>
+    </div>
+
+    <!-- 使用说明 -->
+    <div class="card">
+      <h2>卖家使用说明（记不住就回来看）</h2>
+      <div class="guide">
+        <ol>
+          <li><span class="step-no">1</span> 在「①」粘贴你的上游接口地址、模型名、API Key，点保存。<b>这一步只做一次</b>，Key 只留在服务器。</li>
+          <li><span class="step-no">2</span> 在「②」填买家名字和额度，点「生成令牌」，把那串字符通过微信发给对方。</li>
+          <li><span class="step-no">3</span> 买家打开训练 App → 设置 → 大模型模式 → 把令牌粘进「激活令牌」→ 立即能用。他<b>看不到你的真实 Key</b>，转卖也没用（令牌调不通底层）。</li>
+        </ol>
+        <p class="muted">日常只需做第 2、3 步。谁超额度、谁被转卖，来「③」看一眼就能吊销或调额度。服务器要一直开着，App 才能连上。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const LS = 'liquor_pt_admin';
+let adminToken = localStorage.getItem(LS) || '';
+
+function api(path, opts) {
+  opts = opts || {};
+  const headers = { 'Content-Type': 'application/json' };
+  if (adminToken) headers['Authorization'] = 'Bearer ' + adminToken;
+  return fetch(path, Object.assign({ headers }, opts)).then(async r => {
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || ('错误 ' + r.status));
+    return data;
+  });
+}
+
+async function boot() {
+  try {
+    const s = await api('/api/admin/state');
+    $('setupHint').textContent = s.adminSet ? '请输入密码登录。' : '首次使用：设置一个管理员密码后登录。';
+    $('btnSetup').classList.toggle('hidden', s.adminSet);
+    $('btnLogin').textContent = s.adminSet ? '登录' : '登录 / 初始化';
+  } catch (e) {
+    $('setupHint').textContent = '无法连接后端：' + e.message;
+  }
+}
+
+async function doLogin() {
+  const pwd = $('pwd').value;
+  $('loginMsg').textContent = ''; $('loginMsg').className = 'msg';
+  try {
+    // 未初始化则走 setup，否则登录
+    let r;
+    const s = await api('/api/admin/state').catch(() => ({ adminSet: true }));
+    if (!s.adminSet) r = await api('/api/admin/setup', { method: 'POST', body: JSON.stringify({ password: pwd }) });
+    else r = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: pwd }) });
+    if (r.adminToken) { adminToken = r.adminToken; localStorage.setItem(LS, adminToken); }
+    $('loginCard').classList.add('hidden'); $('dash').classList.remove('hidden');
+    await loadAll();
+  } catch (e) {
+    $('loginMsg').textContent = e.message; $('loginMsg').className = 'msg err';
+  }
+}
+
+async function loadAll() {
+  await loadKey(); await loadBuyers();
+}
+
+async function loadKey() {
+  try {
+    const s = await api('/api/admin/state');
+    if (s.upstream) { $('upUrl').value = s.upstream.url || ''; $('upModel').value = s.upstream.model || ''; }
+    $('keyMsg').textContent = s.hasUpstream ? '✓ 上游已配置' : '尚未配置上游';
+    $('keyMsg').className = 'msg ' + (s.hasUpstream ? 'ok' : 'muted');
+  } catch (e) { $('keyMsg').textContent = e.message; $('keyMsg').className = 'msg err'; }
+}
+
+async function saveKey() {
+  try {
+    await api('/api/admin/setkey', { method: 'POST', body: JSON.stringify({ url: $('upUrl').value.trim(), model: $('upModel').value.trim(), key: $('upKey').value.trim() }) });
+    $('keyMsg').textContent = '✓ 已保存'; $('keyMsg').className = 'msg ok';
+    $('upKey').value = '';
+  } catch (e) { $('keyMsg').textContent = e.message; $('keyMsg').className = 'msg err'; }
+}
+
+async function newBuyer() {
+  const name = $('bName').value.trim();
+  const quota = parseInt($('bQuota').value, 10) || 1000;
+  $('buyerMsg').textContent = ''; $('tokenArea').classList.add('hidden');
+  try {
+    const r = await api('/api/admin/buyers', { method: 'POST', body: JSON.stringify({ name, quota }) });
+    $('tokenVal').textContent = r.token;
+    $('tokenArea').classList.remove('hidden');
+    $('buyerMsg').textContent = '✓ 已生成（额度 ' + r.quota + '）'; $('buyerMsg').className = 'msg ok';
+    $('bName').value = '';
+    await loadBuyers();
+  } catch (e) { $('buyerMsg').textContent = e.message; $('buyerMsg').className = 'msg err'; }
+}
+
+function fmt(t) { return t ? new Date(t).toLocaleString('zh-CN') : '—'; }
+
+async function loadBuyers() {
+  try {
+    const s = await api('/api/admin/state');
+    $('totalUsed').textContent = '累计调用：' + s.totalUsed + ' 次 · 买家数：' + s.buyers.length;
+    const tb = $('buyerRows'); tb.innerHTML = '';
+    $('noBuyer').style.display = s.buyers.length ? 'none' : 'block';
+    s.buyers.forEach(b => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${b.name}</td>
+        <td>${b.used} / ${b.quota}</td>
+        <td><span class="badge ${b.active ? 'on' : 'off'}">${b.active ? '正常' : '已吊销'}</span></td>
+        <td class="muted">${fmt(b.lastUsed)}</td>
+        <td></td>`;
+      const td = tr.lastElementChild;
+      const q = document.createElement('button'); q.className = 'ghost sm'; q.textContent = '调额度';
+      q.onclick = () => { const v = prompt('新额度（次）：', b.quota); if (v) setQuota(b.id, v); };
+      const rv = document.createElement('button'); rv.className = 'ghost sm'; rv.textContent = b.active ? '吊销' : '恢复';
+      rv.onclick = () => toggleBuyer(b.id, b.active ? 'revoke' : 'reactivate');
+      td.appendChild(q); td.appendChild(rv);
+      tb.appendChild(tr);
+    });
+  } catch (e) { /* ignore */ }
+}
+
+async function setQuota(id, quota) {
+  try { await api('/api/admin/buyers/' + id + '/quota', { method: 'POST', body: JSON.stringify({ quota: parseInt(quota, 10) || 1 }) }); await loadBuyers(); }
+  catch (e) { alert(e.message); }
+}
+async function toggleBuyer(id, action) {
+  try { await api('/api/admin/buyers/' + id + '/' + action, { method: 'POST', body: JSON.stringify({}) }); await loadBuyers(); }
+  catch (e) { alert(e.message); }
+}
+
+$('btnLogin').onclick = doLogin;
+$('btnSetup').onclick = doLogin;
+$('btnSaveKey').onclick = saveKey;
+$('btnNewBuyer').onclick = newBuyer;
+$('btnCopy').onclick = () => { navigator.clipboard.writeText($('tokenVal').textContent); $('btnCopy').textContent = '已复制'; setTimeout(() => $('btnCopy').textContent = '复制令牌', 1500); };
+$('logout').onclick = e => { e.preventDefault(); adminToken = ''; localStorage.removeItem(LS); location.reload(); };
+
+boot();
+</script>
+</body>
+</html>
