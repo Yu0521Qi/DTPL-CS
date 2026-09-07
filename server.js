@@ -233,16 +233,26 @@ function handleAdmin(req, res, pathname, method) {
     }).catch(() => sendJSON(res, 400, { error: '请求体解析失败' }));
   }
 
+  // 查询管理员状态：公开可访问。
+  // 前端首屏必须先问"管理员设了没"才能决定显示初始化还是登录表单；
+  // 若放在鉴权卡口之后会形成死锁（想登录得先知道有没有管理员，想查又得先登录）。
+  // 安全兜底：未登录时只回"是否已初始化"这个最小信息，不泄露买家/上游数据；已登录才回完整视图。
+  if (pathname === '/api/admin/state' && method === 'GET') {
+    if (!adminAuthed(req)) {
+      return sendJSON(res, 200, {
+        adminSet: !!store.adminHash,
+        hasUpstream: !!(store.upstream.url && store.upstream.key)
+      });
+    }
+    return sendJSON(res, 200, buyersView());
+  }
+
   // 以下接口均需登录
   if (!adminAuthed(req)) return sendJSON(res, 401, { error: '未登录或会话已失效' });
 
   if (pathname === '/api/admin/logout' && method === 'POST') {
     store.adminSession = null; saveStore();
     return sendJSON(res, 200, { ok: true });
-  }
-
-  if (pathname === '/api/admin/state' && method === 'GET') {
-    return sendJSON(res, 200, buyersView());
   }
 
   if (pathname === '/api/admin/setkey' && method === 'POST') {
